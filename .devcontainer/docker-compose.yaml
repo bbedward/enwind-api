@@ -1,0 +1,51 @@
+version: '3.9'
+services:
+  db:
+    container_name: enwind_postgres
+    image: postgres:17
+    user: '1000:20'
+    ports:
+      - '127.0.0.1:54338:5432'
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/dev
+    volumes:
+      - ../.data/postgres:/var/lib/postgresql/data:delegated
+    networks:
+      - app-network
+
+  app:
+    container_name: enwind_go_dev
+    image: appditto/go-vscode-dev:latest
+    security_opt:
+      - 'seccomp:unconfined'
+    environment:
+      - GOPRIVATE=github.com/enwindapp
+      - PORT=8091
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - DEX_ISSUER_URL=http://localhost:5556
+    ports:
+      - '127.0.0.1:8091:8091'
+    volumes:
+      - ../.:/home/go/app
+      - ${HOME}/.gitconfig:/home/go/.gitconfig
+      - ${HOME}/.ssh:/home/go/.ssh
+    restart: on-failure
+    entrypoint: /bin/zsh
+    stdin_open: true
+    tty: true
+    user: go
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
